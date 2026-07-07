@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0e14">
+<title>Go2 · Control Center</title>
+<style>
+  :root {
+    --bg:#0b0e14; --bg2:#0f131c; --panel:#141926; --panel2:#1a2030;
+    --line:#232a3a; --line2:#2e374a;
+    --accent:#3b82f6; --accent2:#2563eb; --good:#22c55e; --warn:#f59e0b;
+    --danger:#ef4444; --purple:#8b5cf6;
+    --txt:#e7ecf5; --muted:#8a93a6; --muted2:#5d6679;
+    --r:14px; --r-sm:10px;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent;
+      -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+  html,body { margin:0; background:var(--bg); color:var(--txt); min-height:100vh;
+              font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+              font-size:14px; line-height:1.4; }
+  body { position:relative; overflow-x:hidden;
+    background:
+      radial-gradient(120% 75% at 50% -5%, #18223f 0%, transparent 55%),
+      radial-gradient(120% 70% at 50% 105%, #1a1530 0%, transparent 55%),
+      var(--bg); }
+  /* ---------- animated ambient background ---------- */
+  /* drifting aurora glows */
+  body::before { content:""; position:fixed; inset:-5% -5% -5% -5%; z-index:-2;
+    background:
+      radial-gradient(44% 40% at 16% 14%, #3b82f6cc 0%, transparent 60%),
+      radial-gradient(42% 36% at 86% 22%, #8b5cf6c2 0%, transparent 60%),
+      radial-gradient(50% 44% at 64% 92%, #06b6d4a8 0%, transparent 62%),
+      radial-gradient(40% 36% at 8% 76%, #22c55e8a 0%, transparent 60%),
+      radial-gradient(30% 28% at 92% 70%, #ec489985 0%, transparent 62%);
+    filter:blur(3px) saturate(1.3);
+    animation:aurora 14s ease-in-out infinite alternate, hue 30s linear infinite; }
+  /* panning HUD grid (tinted + glowing) */
+  body::after { content:""; position:fixed; inset:0; z-index:-2; pointer-events:none;
+    background-image:
+      linear-gradient(#60a5fa1f 1px, transparent 1px),
+      linear-gradient(90deg, #60a5fa1f 1px, transparent 1px);
+    background-size:40px 40px; mask-image:radial-gradient(circle at 50% 28%, #000 0%, transparent 82%);
+    -webkit-mask-image:radial-gradient(circle at 50% 28%, #000 0%, transparent 82%);
+    animation:gridpan 22s linear infinite; }
+  @keyframes aurora {
+    0%   { transform:translate3d(0,0,0) scale(1.02);   opacity:1; }
+    50%  { transform:translate3d(-5%,3%,0) scale(1.14); opacity:1; }
+    100% { transform:translate3d(4%,-3%,0) scale(1.07); opacity:.92; }
+  }
+  @keyframes hue { from { filter:blur(3px) saturate(1.3) hue-rotate(0deg); }
+                   to   { filter:blur(3px) saturate(1.3) hue-rotate(360deg); } }
+  @keyframes gridpan { from { background-position:0 0, 0 0; }
+                       to   { background-position:40px 40px, 40px 40px; } }
+  /* bright scan sweep across the whole viewport */
+  .scan { position:fixed; left:0; right:0; top:0; height:200px; z-index:-1; pointer-events:none;
+    background:linear-gradient(180deg, transparent, #3b82f626 42%, #93c5fd55 50%, #3b82f626 58%, transparent);
+    box-shadow:0 0 40px #3b82f633; animation:sweep 4.5s linear infinite; }
+  @keyframes sweep { 0% { transform:translateY(-220px); opacity:0; }
+                     6% { opacity:1; } 94% { opacity:1; }
+                     100% { transform:translateY(105vh); opacity:0; } }
+  .app { max-width:600px; margin:0 auto; position:relative; z-index:1;
+         padding:0 12px calc(86px + env(safe-area-inset-bottom)); }
+  @media (prefers-reduced-motion: reduce) {
+    body::before, body::after, .scan { animation:none; }
+  }
+
+  /* ---------- top bar ---------- */
+  header { position:sticky; top:0; z-index:20; padding:12px 0 8px;
+           background:linear-gradient(var(--bg) 70%, transparent);
+           backdrop-filter:blur(6px); }
+  .brand { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .logo { width:34px; height:34px; border-radius:9px; flex:none;
+          background:linear-gradient(135deg, var(--accent), var(--purple));
+          display:grid; place-items:center; font-weight:800; font-size:15px;
+          color:#fff; box-shadow:0 4px 14px #3b82f655;
+          animation:logoGlow 3.5s ease-in-out infinite; }
+  @keyframes logoGlow {
+    0%,100% { box-shadow:0 4px 14px #3b82f555, 0 0 0 0 #3b82f600; }
+    50%     { box-shadow:0 4px 18px #7c3aed88, 0 0 22px 2px #3b82f655; }
+  }
+  .brand .title { font-weight:700; font-size:16px; letter-spacing:.2px; }
+  .brand .sub { font-size:11px; color:var(--muted); }
+  #bar { display:flex; align-items:center; gap:9px; padding:9px 12px;
+         background:var(--panel); border:1px solid var(--line); border-radius:12px;
+         font-size:13px; }
+  #dot { width:9px; height:9px; border-radius:50%; background:var(--danger); flex:none;
+         box-shadow:0 0 0 0 #ef444466; animation:pulse 1.6s infinite; }
+  #dot.ok { background:var(--good); box-shadow:0 0 0 0 #22c55e66; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 currentColor} 70%{box-shadow:0 0 0 7px transparent} 100%{box-shadow:0 0 0 0 transparent} }
+  #state { font-weight:600; }
+  #vel { margin-left:auto; color:var(--muted); font-variant-numeric:tabular-nums;
+         font-size:12px; padding:3px 8px; background:var(--bg2); border-radius:7px;
+         border:1px solid var(--line); }
+
+  /* ---------- bottom nav bar (fixed, native-app style) ---------- */
+  nav.tabs { position:fixed; left:0; right:0; bottom:0; z-index:30;
+             display:flex; padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+             gap:2px; background:rgba(15,19,28,.92); backdrop-filter:blur(14px);
+             border-top:1px solid var(--line2); box-shadow:0 -6px 24px #0006; }
+  .tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+         padding:7px 2px 5px; border-radius:12px; font-size:10px; font-weight:600;
+         letter-spacing:.01em; color:var(--muted); background:transparent;
+         border:1px solid transparent; cursor:pointer; white-space:nowrap;
+         transition:.15s; }
+  .tab .ic { font-size:19px; line-height:1; filter:grayscale(.4); opacity:.8;
+             transition:.15s; }
+  .tab:active { transform:scale(.92); }
+  .tab.active { color:#fff; background:linear-gradient(160deg,#1d2740,#172033);
+                border-color:var(--line2); box-shadow:0 2px 10px #0005 inset; }
+  .tab.active .ic { filter:none; opacity:1; transform:translateY(-1px); }
+  .tab.active::before { content:""; position:absolute; top:-1px; width:26px; height:3px;
+                        border-radius:0 0 3px 3px;
+                        background:linear-gradient(90deg,var(--accent),var(--purple));
+                        box-shadow:0 0 10px var(--accent); }
+  .tab { position:relative; }
+
+  /* ---------- panels ---------- */
+  .panel { display:none; }
+  .panel.active { display:block; }
+  /* stagger children up on tab show */
+  .panel.active > * { animation:riseIn .5s cubic-bezier(.16,1.1,.3,1) backwards; }
+  .panel.active > *:nth-child(1){ animation-delay:.00s }
+  .panel.active > *:nth-child(2){ animation-delay:.06s }
+  .panel.active > *:nth-child(3){ animation-delay:.12s }
+  .panel.active > *:nth-child(4){ animation-delay:.18s }
+  .panel.active > *:nth-child(5){ animation-delay:.24s }
+  .panel.active > *:nth-child(6){ animation-delay:.30s }
+  @keyframes riseIn { from{opacity:0; transform:translateY(22px) scale(.97)} to{opacity:1; transform:none} }
+  @keyframes fade { from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none} }
+  h2 { font-size:11px; margin:18px 4px 8px; color:var(--muted2); font-weight:700;
+       text-transform:uppercase; letter-spacing:.09em; display:flex; align-items:center; gap:7px; }
+  h2::after { content:""; flex:1; height:1px;
+              background:linear-gradient(90deg,var(--line),transparent); }
+  .card { position:relative; background:linear-gradient(180deg,#141926d9,#0f131cd9);
+          backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+          border:1px solid var(--line); border-radius:var(--r);
+          padding:14px; box-shadow:0 1px 0 #ffffff05 inset, 0 8px 24px #00000040;
+          transition:border-color .3s, box-shadow .3s; }
+  /* sweeping highlight along the top edge of every card */
+  .card::before { content:""; position:absolute; inset:0 0 auto 0; height:2px;
+          background:linear-gradient(90deg, transparent, #93c5fd, #c4b5fd, transparent);
+          background-size:45% 100%; background-repeat:no-repeat; border-radius:var(--r) var(--r) 0 0;
+          box-shadow:0 0 8px #60a5fa66; animation:edge 3.8s linear infinite; opacity:.9; }
+  @keyframes edge { from{background-position:-60% 0} to{background-position:160% 0} }
+  .card + .card { margin-top:10px; }
+  @media (prefers-reduced-motion: reduce) {
+    .panel.active > * { animation:none; }
+    .card::before { animation:none; opacity:0; }
+  }
+
+  /* ---------- sensors ---------- */
+  .sensors { display:flex; gap:10px; }
+  .sensors > div { flex:1; }
+  .lbl { font-size:11px; color:var(--muted); margin-bottom:6px; display:flex;
+         align-items:center; gap:5px; font-weight:600; }
+  .lbl code { font-weight:400; color:var(--muted2); font-size:10px; }
+  #cam { width:100%; aspect-ratio:1/1; object-fit:cover; background:#0b0b0b;
+         border-radius:var(--r-sm); display:block; border:1px solid var(--line); }
+  #lidar { width:100%; aspect-ratio:1/1; background:#0b0b0b; border-radius:var(--r-sm);
+           display:block; border:1px solid var(--line); }
+
+  /* ---------- buttons ---------- */
+  button { font-size:14px; font-weight:600; color:var(--txt); background:var(--panel2);
+           border:1px solid var(--line2); border-radius:var(--r-sm); padding:13px 6px;
+           cursor:pointer; transition:.12s; }
+  button:active { transform:scale(.96); background:#222b3e; }
+  button.on { outline:2px solid var(--accent); background:#1d3056; }
+  .accent { background:linear-gradient(135deg,var(--accent2),var(--accent));
+            border-color:var(--accent); color:#fff; }
+  .purple { background:linear-gradient(135deg,#7c3aed,var(--purple));
+            border-color:var(--purple); color:#fff; }
+  .good   { background:linear-gradient(135deg,#16a34a,var(--good));
+            border-color:var(--good); color:#fff; }
+
+  /* ---------- drive ---------- */
+  .drive { display:flex; gap:16px; align-items:center; }
+  #joy { width:158px; height:158px; flex:none; border-radius:50%; position:relative;
+         touch-action:none;
+         background:radial-gradient(circle at 50% 40%, #2a3450, #161c2b);
+         border:1px solid var(--line2); box-shadow:inset 0 6px 18px #0008; }
+  #joy::before { content:""; position:absolute; inset:26px; border-radius:50%;
+                 border:1px dashed #ffffff14; }
+  #knob { width:54px; height:54px; border-radius:50%; position:absolute; left:52px; top:52px;
+          background:radial-gradient(circle at 40% 35%, #60a5fa, var(--accent2));
+          box-shadow:0 4px 14px #0009, 0 0 0 5px #3b82f622; }
+  .pad { flex:1; display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+  .pad .stop { background:linear-gradient(135deg,#dc2626,var(--danger));
+               color:#fff; border-color:var(--danger); }
+  .pad .sp { visibility:hidden; }
+  .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+  .grid2 { display:grid; grid-template-columns:repeat(2,1fr); gap:7px; }
+
+  /* ---------- sliders ---------- */
+  .row { display:flex; align-items:center; gap:12px; margin:10px 0; font-size:13px; }
+  .row label { width:64px; color:var(--muted); flex:none; font-weight:600; }
+  .row output { width:48px; text-align:right; color:var(--txt);
+                font-variant-numeric:tabular-nums; flex:none;
+                background:var(--bg2); padding:3px 6px; border-radius:6px;
+                border:1px solid var(--line); font-size:12px; }
+  input[type=range] { flex:1; accent-color:var(--accent); height:30px; }
+  select { width:100%; padding:13px; font-size:14px; background:var(--panel2); color:var(--txt);
+           border:1px solid var(--line2); border-radius:var(--r-sm); font-weight:600; }
+  .note { font-size:11px; color:var(--muted); margin:8px 2px 0; line-height:1.5; }
+
+  /* ---------- toggles ---------- */
+  .navrow { display:flex; align-items:center; gap:11px; font-size:13.5px;
+            margin-bottom:10px; font-weight:500; }
+  .navrow input[type=checkbox] { width:0; height:0; opacity:0; position:absolute; }
+  .navrow .sw { width:42px; height:24px; border-radius:13px; background:var(--line2);
+                position:relative; flex:none; transition:.18s; }
+  .navrow .sw::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px;
+                       border-radius:50%; background:#fff; transition:.18s; }
+  .navrow input:checked + .sw { background:var(--accent); }
+  .navrow input:checked + .sw::after { transform:translateX(18px); }
+
+  /* ---------- map ---------- */
+  .mapc { width:100%; aspect-ratio:1/1; background:#0b0b0b; border-radius:var(--r-sm);
+         display:block; touch-action:none; cursor:crosshair; border:1px solid var(--line); }
+  .mapc.armed { outline:2px solid var(--accent); outline-offset:-1px; }
+  #navstop { margin-top:8px; width:100%; }
+  .chip { display:inline-flex; align-items:center; gap:5px; font-size:11px;
+          color:var(--muted); background:var(--bg2); border:1px solid var(--line);
+          padding:3px 8px; border-radius:7px; }
+
+  footer { text-align:center; margin:20px 0; font-size:11px; color:var(--muted2); }
+  footer code { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="scan"></div>
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <div class="logo">G2</div>
+      <div>
+        <div class="title">Go2 Control Center</div>
+        <div class="sub">Unitree Go2 · quadruped + Piper arm</div>
+      </div>
+    </div>
+    <div id="bar"><span id="dot"></span><span id="state">connecting…</span>
+      <span id="vel">stopped</span></div>
+  </header>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section class="panel active" data-panel="dash">
+    <h2>Live Sensors</h2>
+    <div class="card sensors">
+      <div><div class="lbl">📷 Camera <code>/camera/image_raw</code></div>
+        <img id="cam" alt="camera"></div>
+      <div><div class="lbl">📡 Lidar <code>/scan</code> · fwd=up</div>
+        <canvas id="lidar" width="240" height="240"></canvas></div>
+    </div>
+
+    <h2>SLAM Map</h2>
+    <div class="card">
+      <canvas class="mapc" width="320" height="320"></canvas>
+      <div class="note"><span class="chip">🔵 robot</span>
+        Drive around to build the map. Use the <b>Autonomy</b> tab to send goals
+        or run waypoint routes.</div>
+    </div>
+  </section>
+
+  <!-- ============ DRIVE ============ -->
+  <section class="panel" data-panel="drive">
+    <h2>Manual Drive</h2>
+    <div class="card drive">
+      <div id="joy"><div id="knob"></div></div>
+      <div class="pad">
+        <button class="sp"></button>
+        <button data-fx="1">↑ Fwd</button>
+        <button class="sp"></button>
+        <button data-fy="1">← Str</button>
+        <button class="stop" id="stop">■ STOP</button>
+        <button data-fy="-1">Str →</button>
+        <button data-fz="1">⟲ L</button>
+        <button data-fx="-1">↓ Back</button>
+        <button data-fz="-1">⟳ R</button>
+      </div>
+    </div>
+
+    <h2>Speed Limits</h2>
+    <div class="card">
+      <div class="row"><label>linear</label>
+        <input id="lin" type="range" min="0" max="0.5" step="0.05" value="0.3">
+        <output id="linv">0.30</output></div>
+      <div class="row"><label>angular</label>
+        <input id="ang" type="range" min="0" max="1.5" step="0.1" value="0.8">
+        <output id="angv">0.80</output></div>
+      <div class="note">Joystick &amp; D-pad scale by these limits. Release the joystick
+        (or hit STOP) to halt — the controller watchdog holds position when idle.</div>
+    </div>
+
+    <h2>Gait</h2>
+    <div class="card">
+      <select id="gait">
+        <option value="crawl">crawl (stable)</option>
+        <option value="trot">trot *</option>
+        <option value="pace">pace *</option>
+        <option value="bound">bound *</option>
+        <option value="pronk">pronk *</option>
+      </select>
+      <div class="note">* experimental — dynamic, may stumble open-loop.</div>
+    </div>
+  </section>
+
+  <!-- ============ AUTONOMY ============ -->
+  <section class="panel" data-panel="auto">
+    <h2>Navigation Mode</h2>
+    <div class="card">
+      <label class="navrow"><input type="checkbox" id="navmode"><span class="sw"></span>
+        <span>Autonomous — tap the map to set a Nav2 goal</span></label>
+      <label class="navrow"><input type="checkbox" id="explore"><span class="sw"></span>
+        <span>🔍 Auto-explore <span class="note" style="display:inline">(frontier mapping)</span></span></label>
+      <label class="navrow"><input type="checkbox" id="follow"><span class="sw"></span>
+        <span>🎯 Follow object <span class="note" style="display:inline">(camera tracking)</span></span></label>
+    </div>
+
+    <h2>Waypoint Route</h2>
+    <div class="card">
+      <label class="navrow"><input type="checkbox" id="wpmode"><span class="sw"></span>
+        <span>📍 Build route — tap the map to add ordered points</span></label>
+      <div class="grid3">
+        <button id="wpstart" class="good">▶ Start</button>
+        <button id="wpclear">✖ Clear</button>
+        <span class="chip" id="wpcount" style="justify-content:center">0 points</span>
+      </div>
+    </div>
+
+    <h2>Map</h2>
+    <div class="card">
+      <canvas class="mapc" width="320" height="320"></canvas>
+      <div class="note">Press a free spot to drop a goal; drag to aim final heading;
+        release to send. Manual driving pauses while autonomous.</div>
+      <button id="navstop" class="purple">■ Stop navigation</button>
+    </div>
+  </section>
+
+  <!-- ============ POSTURE ============ -->
+  <section class="panel" data-panel="posture">
+    <h2>Posture &amp; Actions</h2>
+    <div class="card">
+      <div class="grid4">
+        <button data-act="stand">⮝ Stand</button>
+        <button data-act="sit" class="purple">⤓ Sit</button>
+        <button data-act="liedown">Lie</button>
+        <button data-act="crouch">Crouch</button>
+        <button data-act="jump" class="accent">⤒ Jump</button>
+        <button data-act="wave">👋 Wave</button>
+        <button data-act="shake">🤝 Shake</button>
+        <button data-act="dance">💃 Dance</button>
+        <button data-act="selfright">Self-right*</button>
+      </div>
+      <div class="note">*experimental — open-loop self-right rarely succeeds.</div>
+    </div>
+  </section>
+
+  <!-- ============ BODY POSE ============ -->
+  <section class="panel" data-panel="pose">
+    <h2>Body Pose · Lean &amp; Height</h2>
+    <div class="card">
+      <div class="row"><label>roll</label>
+        <input class="pose" id="roll" type="range" min="-0.3" max="0.3" step="0.02" value="0">
+        <output id="rollv">0.00</output></div>
+      <div class="row"><label>pitch</label>
+        <input class="pose" id="pitch" type="range" min="-0.3" max="0.3" step="0.02" value="0">
+        <output id="pitchv">0.00</output></div>
+      <div class="row"><label>yaw</label>
+        <input class="pose" id="yaw" type="range" min="-0.3" max="0.3" step="0.02" value="0">
+        <output id="yawv">0.00</output></div>
+      <div class="row"><label>height</label>
+        <input class="pose" id="height" type="range" min="0" max="0.4" step="0.02" value="0">
+        <output id="heightv">0.00</output></div>
+      <button id="resetpose" style="width:100%;margin-top:8px">↺ Reset pose</button>
+    </div>
+  </section>
+
+  <!-- ============ ARM ============ -->
+  <section class="panel" data-panel="arm">
+    <h2>Piper Arm · Joints</h2>
+    <div class="card">
+      <div class="row"><label>j1 base</label>
+        <input class="arm" id="aj1" type="range" min="-2.618" max="2.618" step="0.02" value="0">
+        <output id="aj1v">0.00</output></div>
+      <div class="row"><label>j2 shldr</label>
+        <input class="arm" id="aj2" type="range" min="0" max="3.14" step="0.02" value="1.57">
+        <output id="aj2v">1.57</output></div>
+      <div class="row"><label>j3 elbow</label>
+        <input class="arm" id="aj3" type="range" min="-2.967" max="0" step="0.02" value="-1.3485">
+        <output id="aj3v">-1.35</output></div>
+      <div class="row"><label>j4 roll</label>
+        <input class="arm" id="aj4" type="range" min="-1.745" max="1.745" step="0.02" value="0">
+        <output id="aj4v">0.00</output></div>
+      <div class="row"><label>j5 pitch</label>
+        <input class="arm" id="aj5" type="range" min="-1.22" max="1.22" step="0.02" value="0">
+        <output id="aj5v">0.00</output></div>
+      <div class="row"><label>j6 yaw</label>
+        <input class="arm" id="aj6" type="range" min="-2.094" max="2.094" step="0.02" value="0">
+        <output id="aj6v">0.00</output></div>
+      <div class="row"><label>gripper</label>
+        <input class="arm" id="agrip" type="range" min="0" max="0.035" step="0.001" value="0">
+        <output id="agripv">0.00</output></div>
+    </div>
+
+    <h2>Presets</h2>
+    <div class="card">
+      <div class="grid3">
+        <button data-arm="home">Home</button>
+        <button data-arm="reach">Reach</button>
+        <button data-arm="down">Down</button>
+        <button data-arm="rest">Rest</button>
+        <button data-arm="open">Grip ○</button>
+        <button data-arm="close">Grip ●</button>
+      </div>
+      <button id="runpp" class="good" style="width:100%;margin-top:10px">
+        ▶ Run pick-place demo (A→B→A)</button>
+    </div>
+  </section>
+
+  <footer>Go2 Control Center · rosbridge @ <code id="hostlbl"></code></footer>
+</div>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-tab="dash"><span class="ic">📊</span>Dashboard</button>
+  <button class="tab" data-tab="drive"><span class="ic">🕹️</span>Drive</button>
+  <button class="tab" data-tab="auto"><span class="ic">🗺️</span>Autonomy</button>
+  <button class="tab" data-tab="posture"><span class="ic">🐕</span>Posture</button>
+  <button class="tab" data-tab="pose"><span class="ic">🎚️</span>Pose</button>
+  <button class="tab" data-tab="arm"><span class="ic">🦾</span>Arm</button>
+</nav>
+
+<script>
+"use strict";
+// ---- endpoints (same host that served this page) ----
+const HOST  = location.hostname;
+const WS_URL = `ws://${HOST}:9090`;                          // rosbridge
+const CAM_URL = `http://${HOST}:8080/stream?topic=/camera/image_raw&type=mjpeg`;
+document.getElementById("hostlbl").textContent = HOST + ":9090";
+document.getElementById("cam").src = CAM_URL;
+
+// ---- minimal rosbridge client (vanilla, no roslibjs) ----
+let ws = null, wsReady = false;
+const dot = document.getElementById("dot");
+const stateEl = document.getElementById("state");
+
+function connect() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    wsReady = true; dot.classList.add("ok"); stateEl.textContent = "connected";
+    advertise("/cmd_vel", "geometry_msgs/Twist");
+    advertise("/go2/action", "std_msgs/String");
+    advertise("/go2/body_pose", "geometry_msgs/Twist");
+    advertise("/goal_pose", "geometry_msgs/PoseStamped");
+    advertise("/go2/waypoints", "geometry_msgs/PoseArray");
+    advertise("/go2/explore_enable", "std_msgs/Bool");
+    advertise("/go2/follow_enable", "std_msgs/Bool");
+    advertise("/go2/arm_cmd", "std_msgs/Float64MultiArray");
+    advertise("/go2/run_pickplace", "std_msgs/Bool");
+    send({op:"subscribe", topic:"/scan", type:"sensor_msgs/LaserScan",
+          throttle_rate:100, queue_length:1});
+    send({op:"subscribe", topic:"/map", type:"nav_msgs/OccupancyGrid",
+          throttle_rate:1500, queue_length:1});
+    send({op:"subscribe", topic:"/tf", type:"tf2_msgs/TFMessage",
+          throttle_rate:100, queue_length:1});
+    send({op:"subscribe", topic:"/tf_static", type:"tf2_msgs/TFMessage"});
+  };
+  ws.onclose = () => {
+    wsReady = false; dot.classList.remove("ok"); stateEl.textContent = "reconnecting…";
+    setTimeout(connect, 1000);
+  };
+  ws.onerror = () => ws.close();
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.op !== "publish") return;
+    if (m.topic === "/scan") drawLidar(m.msg);
+    else if (m.topic === "/map") onMap(m.msg);
+    else if (m.topic === "/tf" || m.topic === "/tf_static") onTf(m.msg);
+  };
+}
+function send(o) { if (wsReady) ws.send(JSON.stringify(o)); }
+function advertise(topic, type) { send({op:"advertise", topic, type}); }
+function pub(topic, msg) { send({op:"publish", topic, msg}); }
+
+// ---- tab switching ----
+const tabs = document.querySelectorAll(".tab");
+const panels = document.querySelectorAll(".panel");
+tabs.forEach(t => t.addEventListener("click", () => {
+  tabs.forEach(x => x.classList.remove("active"));
+  panels.forEach(p => p.classList.remove("active"));
+  t.classList.add("active");
+  const tgt = document.querySelector(`.panel[data-panel="${t.dataset.tab}"]`);
+  tgt.classList.add("active");
+  window.scrollTo({top:0, behavior:"instant"});   // start each tab at the top
+  if (mapImg) drawMap();   // map canvas may have been hidden; redraw on show
+}));
+
+// ---- drive state (latched, published @20Hz, mirrors the tkinter panel) ----
+let fx = 0, fy = 0, fz = 0;
+const lin = document.getElementById("lin"), ang = document.getElementById("ang");
+function twist(lx, ly, az) { return {linear:{x:lx,y:ly,z:0}, angular:{x:0,y:0,z:az}}; }
+
+function pubDrive() {
+  const L = parseFloat(lin.value), A = parseFloat(ang.value);
+  const vx = fx*L, vy = fy*L, wz = fz*A;
+  pub("/cmd_vel", twist(vx, vy, wz));
+  const moving = Math.abs(vx)>1e-6 || Math.abs(vy)>1e-6 || Math.abs(wz)>1e-6;
+  document.getElementById("vel").textContent = moving ?
+    `vx=${vx.toFixed(2)} vy=${vy.toFixed(2)} wz=${wz.toFixed(2)}` : "stopped";
+}
+function pubPose() {
+  pub("/go2/body_pose", {
+    linear:{x:0, y:0, z:parseFloat(height.value)},
+    angular:{x:parseFloat(roll.value), y:parseFloat(pitch.value), z:parseFloat(yaw.value)}
+  });
+}
+function setDrive(nfx, nfy, nfz) { fx=nfx; fy=nfy; fz=nfz; pubDrive(); }
+function stop() { setDrive(0,0,0); }
+
+// Manual driving pauses in autonomous mode, and when idle it goes SILENT (sends one
+// final stop, then nothing) so an open panel never fights Nav2's /cmd_vel. The
+// controller's watchdog holds the robot stopped while no one publishes.
+let wasMoving = false;
+setInterval(() => {
+  if (!wsReady || navMode) return;
+  pubPose();                                  // body pose never conflicts with Nav2
+  const moving = Math.abs(fx) > 1e-6 || Math.abs(fy) > 1e-6 || Math.abs(fz) > 1e-6;
+  if (moving) { pubDrive(); wasMoving = true; }
+  else if (wasMoving) { pubDrive(); wasMoving = false; }   // one final zero, then silent
+}, 50);
+
+// ---- D-pad + STOP (latching, like the desktop buttons) ----
+document.querySelectorAll("button[data-fx],button[data-fy],button[data-fz]").forEach(b => {
+  b.addEventListener("click", () => setDrive(
+    +(b.dataset.fx||0), +(b.dataset.fy||0), +(b.dataset.fz||0)));
+});
+document.getElementById("stop").addEventListener("click", stop);
+
+// ---- actions + gait ----
+document.querySelectorAll("button[data-act]").forEach(b => {
+  b.addEventListener("click", () => { stop(); pub("/go2/action", {data:b.dataset.act}); });
+});
+document.getElementById("gait").addEventListener("change", (e) =>
+  pub("/go2/action", {data:"gait_" + e.target.value}));
+
+// ---- sliders: live value labels + reset ----
+function bindOut(id) {
+  const el = document.getElementById(id), out = document.getElementById(id+"v");
+  const upd = () => out.textContent = parseFloat(el.value).toFixed(2);
+  el.addEventListener("input", upd); upd();
+}
+["lin","ang","roll","pitch","yaw","height",
+ "aj1","aj2","aj3","aj4","aj5","aj6","agrip"].forEach(bindOut);
+
+// ---- arm (Piper): sliders publish live; preset + gripper buttons ----
+const ARM_IDS = ["aj1","aj2","aj3","aj4","aj5","aj6","agrip"];
+const ARM_PRESETS = {
+  home: [0, 1.57, -1.3485, 0, 0, 0, 0],
+  reach:[0, 0.9, -0.6, 0, 0.6, 0, 0.03],
+  down: [0, 0.4, -0.7, 0, 1.4, 0, 0.03],
+  rest: [0, 0, 0, 0, 0, 0, 0],
+};
+function pubArm() {
+  const data = ARM_IDS.map(id => parseFloat(document.getElementById(id).value));
+  pub("/go2/arm_cmd", {layout:{dim:[], data_offset:0}, data});
+}
+function setArm(q) {
+  ARM_IDS.forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.value = q[i];
+    el.dispatchEvent(new Event("input"));   // refresh its label
+  });
+  pubArm();
+}
+ARM_IDS.forEach(id => document.getElementById(id).addEventListener("input", pubArm));
+document.getElementById("runpp").addEventListener("click",
+  () => pub("/go2/run_pickplace", {data: true}));
+document.querySelectorAll("button[data-arm]").forEach(b => {
+  b.addEventListener("click", () => {
+    const k = b.dataset.arm;
+    if (k === "open" || k === "close") {
+      const g = document.getElementById("agrip");
+      g.value = k === "open" ? 0.035 : 0;
+      g.dispatchEvent(new Event("input"));
+      pubArm();
+    } else setArm(ARM_PRESETS[k]);
+  });
+});
+document.getElementById("resetpose").addEventListener("click", () => {
+  ["roll","pitch","yaw","height"].forEach(id => {
+    document.getElementById(id).value = 0;
+    document.getElementById(id+"v").textContent = "0.00";
+  });
+});
+
+// ---- virtual joystick (touch/mouse): forward + turn, release = stop ----
+const joy = document.getElementById("joy"), knob = document.getElementById("knob");
+const REACH = 52, KNOB = 27;          // px: travel radius, knob radius
+function joyMove(ev) {
+  const r = joy.getBoundingClientRect();
+  const cx = r.left + r.width/2, cy = r.top + r.height/2;
+  let dx = ev.clientX - cx, dy = ev.clientY - cy;
+  const d = Math.hypot(dx, dy);
+  if (d > REACH) { dx = dx*REACH/d; dy = dy*REACH/d; }
+  knob.style.left = (joy.clientWidth/2 + dx - KNOB) + "px";
+  knob.style.top  = (joy.clientHeight/2 + dy - KNOB) + "px";
+  setDrive(-dy/REACH, 0, -dx/REACH);   // up=fwd, left=turn-left (matches tkinter)
+}
+function joyEnd() {
+  knob.style.left = (joy.clientWidth/2 - KNOB) + "px";
+  knob.style.top  = (joy.clientHeight/2 - KNOB) + "px";
+  stop();
+}
+joy.addEventListener("pointerdown", (e) => { joy.setPointerCapture(e.pointerId); joyMove(e); });
+joy.addEventListener("pointermove", (e) => { if (e.buttons || e.pointerType==="touch") {
+  if (joy.hasPointerCapture(e.pointerId)) joyMove(e); } });
+joy.addEventListener("pointerup", joyEnd);
+joy.addEventListener("pointercancel", joyEnd);
+
+// ---- lidar top-down render (matches tkinter math) ----
+const lc = document.getElementById("lidar"), ctx = lc.getContext("2d");
+const LS = lc.width, VIEW_M = 5.0, SCALE = (LS/2 - 6)/VIEW_M;
+function drawLidar(msg) {
+  const cx = LS/2, cy = LS/2;
+  ctx.fillStyle = "#0b0b0b"; ctx.fillRect(0,0,LS,LS);
+  ctx.strokeStyle = "#1f3b1f";
+  for (let ring=1; ring<=VIEW_M; ring++) {
+    ctx.beginPath(); ctx.arc(cx, cy, ring*SCALE, 0, 2*Math.PI); ctx.stroke();
+  }
+  ctx.fillStyle = "#33ccff";                       // robot, pointing up = forward
+  ctx.beginPath(); ctx.moveTo(cx, cy-7); ctx.lineTo(cx-5, cy+5);
+  ctx.lineTo(cx+5, cy+5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#ff4040";
+  let a = msg.angle_min;
+  for (const r of msg.ranges) {
+    if (r > 0 && r < VIEW_M) {
+      const x = cx - r*SCALE*Math.sin(a), y = cy - r*SCALE*Math.cos(a);
+      ctx.fillRect(x-1.5, y-1.5, 3, 3);
+    }
+    a += msg.angle_increment;
+  }
+}
+
+// ===== SLAM map + Nav2 tap-to-go =====================================
+// ---- TF: track map->odom & odom->base_link, compose to map->base_link ----
+const tfs = {};                       // "parent>child" -> {x,y,yaw}
+function quatYaw(q){ return Math.atan2(2*(q.w*q.z + q.x*q.y),
+                                       1 - 2*(q.y*q.y + q.z*q.z)); }
+function onTf(msg){
+  for (const t of msg.transforms){
+    const tr = t.transform.translation, ro = t.transform.rotation;
+    tfs[t.header.frame_id + ">" + t.child_frame_id] =
+      {x:tr.x, y:tr.y, yaw:quatYaw(ro)};
+  }
+}
+function compose(a,b){                 // a∘b : parent->mid ∘ mid->child
+  const c=Math.cos(a.yaw), s=Math.sin(a.yaw);
+  return {x:a.x + c*b.x - s*b.y, y:a.y + s*b.x + c*b.y, yaw:a.yaw + b.yaw};
+}
+function robotInMap(){
+  const mo = tfs["map>odom"], ob = tfs["odom>base_link"];
+  if (!ob) return null;
+  return mo ? compose(mo, ob) : ob;    // before SLAM corrects, odom≈map
+}
+
+// ---- occupancy grid render + tap-to-goal ----
+// Both the Dashboard and Autonomy tabs contain a #map canvas; render to whichever
+// is currently visible (offsetParent is null when a panel is display:none).
+function mapEls(){ return Array.from(document.querySelectorAll(".mapc")); }
+function activeMap(){ return mapEls().find(c => c.offsetParent !== null) || mapEls()[0]; }
+let mapMsg = null, mapImg = null, goalWorld = null;
+let route = [], wpMode = false;          // waypoint route being built (world points)
+let view = {scale:1, ox:0, oy:0};
+
+function onMap(msg){
+  mapMsg = msg;
+  const w = msg.info.width, h = msg.info.height, d = msg.data;
+  const off = document.createElement("canvas"); off.width = w; off.height = h;
+  const octx = off.getContext("2d"), img = octx.createImageData(w, h);
+  for (let i=0; i<w*h; i++){
+    const v = d[i];
+    const shade = v < 0 ? 43 : 255 - Math.round(v * 2.55);  // unknown gray / free white / occ black
+    const col = i % w, row = Math.floor(i / w);
+    const j = ((h - 1 - row) * w + col) * 4;                // flip Y so +y is up
+    img.data[j] = img.data[j+1] = img.data[j+2] = shade; img.data[j+3] = 255;
+  }
+  octx.putImageData(img, 0, 0);
+  mapImg = off;
+  drawMap();
+}
+function worldToPix(wx, wy){
+  const o = mapMsg.info.origin.position, res = mapMsg.info.resolution;
+  const col = (wx - o.x)/res, row = (wy - o.y)/res;
+  return {x: view.ox + col*view.scale,
+          y: view.oy + (mapMsg.info.height - row)*view.scale};
+}
+function pixToWorld(cx, cy){
+  const o = mapMsg.info.origin.position, res = mapMsg.info.resolution;
+  const col = (cx - view.ox)/view.scale;
+  const row = mapMsg.info.height - (cy - view.oy)/view.scale;
+  return {x: o.x + col*res, y: o.y + row*res};
+}
+function drawMap(){
+  const mapCanvas = activeMap();
+  if (!mapCanvas) return;
+  const mctx = mapCanvas.getContext("2d");
+  const CW = mapCanvas.width, CH = mapCanvas.height;
+  mctx.fillStyle = "#0b0b0b"; mctx.fillRect(0,0,CW,CH);
+  if (!mapImg){ return; }
+  const w = mapImg.width, h = mapImg.height;
+  const scale = Math.min(CW/w, CH/h);
+  view = {scale, ox:(CW - w*scale)/2, oy:(CH - h*scale)/2};
+  mctx.imageSmoothingEnabled = false;
+  mctx.drawImage(mapImg, view.ox, view.oy, w*scale, h*scale);
+  if (goalWorld){                                  // goal marker + heading
+    const g = worldToPix(goalWorld.x, goalWorld.y);
+    mctx.strokeStyle = "#3fb950"; mctx.fillStyle = "#3fb950"; mctx.lineWidth = 2;
+    mctx.beginPath(); mctx.arc(g.x, g.y, 7, 0, 2*Math.PI); mctx.stroke();
+    if (goalWorld.yaw == null){                    // not aimed yet -> crosshair
+      mctx.beginPath(); mctx.moveTo(g.x-11,g.y); mctx.lineTo(g.x+11,g.y);
+      mctx.moveTo(g.x,g.y-11); mctx.lineTo(g.x,g.y+11); mctx.stroke();
+    } else {                                        // heading arrow
+      const t = worldToPix(goalWorld.x + 0.7*Math.cos(goalWorld.yaw),
+                           goalWorld.y + 0.7*Math.sin(goalWorld.yaw));
+      const a = Math.atan2(t.y - g.y, t.x - g.x);
+      mctx.beginPath(); mctx.moveTo(g.x, g.y); mctx.lineTo(t.x, t.y); mctx.stroke();
+      mctx.beginPath(); mctx.moveTo(t.x, t.y);
+      mctx.lineTo(t.x - 8*Math.cos(a-0.4), t.y - 8*Math.sin(a-0.4));
+      mctx.lineTo(t.x - 8*Math.cos(a+0.4), t.y - 8*Math.sin(a+0.4));
+      mctx.closePath(); mctx.fill();
+    }
+  }
+  if (route.length){                               // waypoint route: path + numbers
+    mctx.strokeStyle = "#e3b341"; mctx.fillStyle = "#e3b341"; mctx.lineWidth = 2;
+    mctx.setLineDash([5,4]); mctx.beginPath();
+    route.forEach((w,i) => { const p = worldToPix(w.x, w.y);
+      i ? mctx.lineTo(p.x,p.y) : mctx.moveTo(p.x,p.y); });
+    mctx.stroke(); mctx.setLineDash([]);
+    mctx.textAlign = "center"; mctx.textBaseline = "middle"; mctx.font = "bold 11px sans-serif";
+    route.forEach((w,i) => { const p = worldToPix(w.x, w.y);
+      mctx.fillStyle = "#e3b341";
+      mctx.beginPath(); mctx.arc(p.x,p.y,9,0,2*Math.PI); mctx.fill();
+      mctx.fillStyle = "#1a1a1a"; mctx.fillText(String(i+1), p.x, p.y); });
+  }
+  const rp = robotInMap();                         // robot arrow
+  if (rp){
+    const p = worldToPix(rp.x, rp.y);
+    mctx.save(); mctx.translate(p.x, p.y); mctx.rotate(-rp.yaw);
+    mctx.fillStyle = "#0d6efd";
+    mctx.beginPath(); mctx.moveTo(10,0); mctx.lineTo(-7,-7);
+    mctx.lineTo(-7,7); mctx.closePath(); mctx.fill();
+    mctx.restore();
+  }
+}
+setInterval(() => { if (mapImg) drawMap(); }, 200);   // refresh robot/goal @5Hz
+
+// ---- autonomous mode toggle + tap + stop ----
+const navChk = document.getElementById("navmode");
+let navMode = false;
+navChk.addEventListener("change", () => {
+  navMode = navChk.checked;
+  mapEls().forEach(c => c.classList.toggle("armed", navMode));
+  if (navMode) stop();                 // halt manual motion; loop then pauses publishing
+  else { setExplore(false); setFollow(false); }   // leaving autonomous -> stop autonomy modes
+});
+
+// ---- auto-explore + follow toggles ----
+// Each just gates its node via a Bool topic. Enabling either forces autonomous mode
+// (so manual cmd_vel pauses) and turns the other off -- only one /cmd_vel owner at a time.
+const exploreChk = document.getElementById("explore");
+const followChk = document.getElementById("follow");
+function setExplore(on){
+  if (exploreChk.checked !== on) exploreChk.checked = on;
+  pub("/go2/explore_enable", {data: on});
+}
+function setFollow(on){
+  if (followChk.checked !== on) followChk.checked = on;
+  pub("/go2/follow_enable", {data: on});
+}
+function armAutonomous(){ navChk.checked = true; navMode = true;
+  mapEls().forEach(c => c.classList.add("armed")); stop(); }
+exploreChk.addEventListener("change", () => {
+  const on = exploreChk.checked;
+  pub("/go2/explore_enable", {data: on});
+  if (on) { setFollow(false); if (!navMode) armAutonomous(); }
+});
+followChk.addEventListener("change", () => {
+  const on = followChk.checked;
+  pub("/go2/follow_enable", {data: on});
+  if (on) { setExplore(false); if (!navMode) armAutonomous(); }
+});
+function sendGoal(x, y, yaw){
+  pub("/goal_pose", {header:{frame_id:"map", stamp:{sec:0, nanosec:0}},
+      pose:{position:{x, y, z:0},
+            orientation:{x:0, y:0, z:Math.sin(yaw/2), w:Math.cos(yaw/2)}}});
+}
+function canvasToWorld(e, mapCanvas){
+  const r = mapCanvas.getBoundingClientRect();
+  const cx = (e.clientX - r.left) * mapCanvas.width / r.width;
+  const cy = (e.clientY - r.top)  * mapCanvas.height / r.height;
+  return pixToWorld(cx, cy);
+}
+// Press = place goal, drag = aim final heading, release = send.
+// A plain tap (no drag) defaults the heading to the travel direction.
+// Bind to every #map canvas (Dashboard + Autonomy share the same logic).
+let goalDrag = null;
+mapEls().forEach(mapCanvas => {
+  mapCanvas.addEventListener("pointerdown", (e) => {
+    if (!mapMsg) return;
+    if (wpMode){                              // add a waypoint to the route
+      route.push(canvasToWorld(e, mapCanvas));
+      document.getElementById("wpcount").textContent = route.length + " points";
+      drawMap();
+      return;
+    }
+    if (!navMode) return;
+    mapCanvas.setPointerCapture(e.pointerId);
+    goalDrag = canvasToWorld(e, mapCanvas);
+    goalWorld = {x: goalDrag.x, y: goalDrag.y, yaw: null};
+    drawMap();
+  });
+  mapCanvas.addEventListener("pointermove", (e) => {
+    if (!goalDrag) return;
+    const w = canvasToWorld(e, mapCanvas);
+    const dx = w.x - goalDrag.x, dy = w.y - goalDrag.y;
+    goalWorld.yaw = Math.hypot(dx, dy) > 0.15 ? Math.atan2(dy, dx) : null;
+    drawMap();
+  });
+  mapCanvas.addEventListener("pointerup", () => {
+    if (!goalDrag) return;
+    let yaw = goalWorld.yaw;
+    if (yaw === null) {                       // tap: face the way it travels
+      const rp = robotInMap();
+      yaw = rp ? Math.atan2(goalDrag.y - rp.y, goalDrag.x - rp.x) : 0;
+      goalWorld.yaw = yaw;
+    }
+    sendGoal(goalDrag.x, goalDrag.y, yaw);
+    goalDrag = null; drawMap();
+  });
+});
+document.getElementById("navstop").addEventListener("click", () => {
+  const rp = robotInMap();             // goal = current pose -> Nav2 stops here
+  if (rp) sendGoal(rp.x, rp.y, rp.yaw);
+  goalWorld = null;
+  navChk.checked = false; navMode = false;
+  mapEls().forEach(c => c.classList.remove("armed"));
+  setExplore(false); setFollow(false); // stopping nav also stops autonomy modes
+});
+
+// ---- waypoint route: tap to add points, Start to run, Clear to cancel ----
+const wpChk = document.getElementById("wpmode");
+wpChk.addEventListener("change", () => {
+  wpMode = wpChk.checked;
+  mapEls().forEach(c => c.classList.toggle("armed", wpMode || navMode));
+  if (wpMode){ navChk.checked = false; navMode = false; stop(); }   // not single-goal
+});
+function sendWaypoints(pts){               // empty array cancels the active route
+  pub("/go2/waypoints", {header:{frame_id:"map", stamp:{sec:0, nanosec:0}},
+    poses: pts.map(p => ({position:{x:p.x, y:p.y, z:0},
+                          orientation:{x:0, y:0, z:0, w:1}}))});
+}
+document.getElementById("wpstart").addEventListener("click", () => {
+  if (!route.length) return;
+  sendWaypoints(route);
+  wpChk.checked = false; wpMode = false;
+  navChk.checked = true; navMode = true;  // arm autonomous so manual cmd_vel pauses
+  mapEls().forEach(c => c.classList.add("armed")); stop();
+});
+document.getElementById("wpclear").addEventListener("click", () => {
+  route = []; document.getElementById("wpcount").textContent = "0 points";
+  sendWaypoints([]); drawMap();
+});
+
+connect();
+</script>
+</body>
+</html>
