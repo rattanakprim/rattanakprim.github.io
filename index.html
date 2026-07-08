@@ -2462,7 +2462,7 @@ const t="165",e={LEFT:0,MIDDLE:1,RIGHT:2,ROTATE:0,DOLLY:1,PAN:2},n={ROTATE:0,PAN
     drone.add(disc);
   }
 
-  var SCALE = isMobile ? 0.12 : 0.15;   /* much smaller than before */
+  var SCALE = isMobile ? 0.17 : 0.23;   /* much smaller than before */
   rig.scale.setScalar(SCALE);
   scene.add(rig);
 
@@ -2585,7 +2585,7 @@ const t="165",e={LEFT:0,MIDDLE:1,RIGHT:2,ROTATE:0,DOLLY:1,PAN:2},n={ROTATE:0,PAN
 
     rig.position.x = anchor.x + Math.cos(theta) * rx;
     rig.position.z = Math.sin(theta) * rz;
-    rig.position.y = anchor.y + anchor.h * 0.52
+    rig.position.y = anchor.y - anchor.h * 0.06
       + Math.sin(theta * 2) * 0.07
       + Math.sin(t * 1.7) * 0.05
       + away * away * 3.6;
