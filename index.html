@@ -410,6 +410,10 @@
   }
   @keyframes line-up { to { transform: none; } }
   @keyframes fade-up { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .btn, .btn svg, .names .frame, .round { transition: none; }
+    .btn:active, .btn:hover svg, .btn.dark:hover svg, .names a:hover .frame, .greet a:hover .round { transform: none; }
+  }
 </style>
 </head>
 <body>
@@ -641,8 +645,14 @@
       });
     }, { rootMargin: '0px 0px -8% 0px' });
     rise.forEach(function (el) { io.observe(el); });
-    /* fail-safe: never leave content hidden */
-    setTimeout(function () { rise.forEach(function (el) { el.classList.add('in'); }); }, 6000);
+    /* fail-safe: only rescue elements already on screen, so below-the-fold reveals still wait for scroll */
+    setTimeout(function () {
+      rise.forEach(function (el) {
+        if (el.classList.contains('in')) return;
+        var r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0) el.classList.add('in');
+      });
+    }, 6000);
   }
 
   /* ---------- the artificial horizon (the live thing) ---------- */
@@ -659,6 +669,8 @@
   var MAX_ROLL = 12, MAX_PITCH = 10;              /* degrees */
   var target = { roll: 0, pitch: 0 }, cur = { roll: 0, pitch: 0 };
   var pointerActive = false, lastInput = 0, t0 = performance.now(), raf = 0, visible = true;
+  var inView = true, tabVisible = !document.hidden;
+  function syncVisible() { visible = inView && tabVisible; kick(); }
 
   function fmt(v) { var a = Math.abs(v).toFixed(1); return (v <= -0.05 ? '−' : '+') + a + '°'; }
 
@@ -723,9 +735,9 @@
   });
 
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (en) { visible = en[0].isIntersecting; kick(); }).observe(hero);
+    new IntersectionObserver(function (en) { inView = en[0].isIntersecting; syncVisible(); }).observe(hero);
   }
-  document.addEventListener('visibilitychange', function () { visible = !document.hidden; kick(); });
+  document.addEventListener('visibilitychange', function () { tabVisible = !document.hidden; syncVisible(); });
   window.addEventListener('resize', draw);
   draw(); kick();
 
