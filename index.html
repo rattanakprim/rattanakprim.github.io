@@ -75,7 +75,7 @@
     --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
     --step-statement: clamp(1.5rem, 0.95rem + 1.9vw, 2.25rem);
     --step-head: clamp(3rem, 1.6rem + 5.4vw, 6.5rem);
-    --step-display: clamp(5.5rem, 21vw, 18.5rem);
+    --step-display: clamp(4.5rem, min(21vw, 27vh), 18.5rem);
 
     --margin: clamp(16px, 2.2vw, 32px);
     --gap-section: clamp(104px, 12vw, 200px);
@@ -96,9 +96,12 @@
     overflow-x: clip;
   }
   img { display: block; max-width: 100%; height: auto; }
+  p, figcaption, li { text-wrap: pretty; }
+  h2 { text-wrap: balance; }
   a { color: inherit; }
   ::selection { background: var(--amber); color: var(--accent-ink); }
   :focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+  footer :focus-visible, .hero-foot :focus-visible, .rows .greet a:focus-visible { outline-color: var(--accent-ink); }
   .wrap { padding-inline: var(--margin); }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .display {
@@ -154,6 +157,8 @@
     transition: text-decoration-color 200ms, color 200ms;
   }
   .hero-top nav a:hover, .foot-links a:hover { text-decoration-color: currentColor; }
+  .hero-top nav a, .foot-links a, .legal a { display: inline-block; padding: 12px 0; }
+  .legal { align-items: center; }
   .layer { position: absolute; inset: 0; }
   .layer.ground {
     background: var(--accent);
@@ -161,10 +166,10 @@
   }
   .hero .headline {
     position: absolute; left: 0; right: 0;
-    top: calc(var(--seam) - var(--step-display) * 1.29);
+    top: max(88px, calc(var(--seam) - var(--step-display) * 1.29));
     text-align: center;
     font-size: var(--step-display);
-    color: var(--accent);
+    color: #0AE2FF;
     z-index: 3;
     /* one headline over both fields: cyan against the night sky, near-black against the cyan ground */
     mix-blend-mode: difference;
@@ -183,14 +188,18 @@
     background: none; border: 0; color: inherit; cursor: pointer; padding: 6px 0;
   }
   .attitude b { font-weight: 700; }
+  .attitude-wrap { display: flex; flex-direction: column; align-items: flex-end; }
+  .attitude-hint { font-size: var(--step-small); font-weight: 500; opacity: 0; transform: translateY(4px); transition: opacity 200ms, transform 200ms var(--ease-out); }
+  .attitude-wrap:focus-within .attitude-hint, .attitude-wrap:hover .attitude-hint { opacity: 1; transform: none; }
   .attitude:hover b { text-decoration: underline; text-underline-offset: 3px; }
 
   @media (max-width: 700px) {
-    .hero { --seam: 46%; }
+    .hero { --seam: 42%; height: min(100svh, 640px); min-height: 520px; }
+    .attitude-wrap { align-items: flex-start; }
     :root { --step-display: 22.5vw; }
     .hero-top nav li.wide, .only-wide { display: none; }
     .hero-top .btn { padding: 0.75em 1em; }
-    .hero-foot { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    .hero-foot { flex-direction: column; align-items: flex-start; gap: 0.5rem; bottom: auto; top: calc(var(--seam) + var(--step-display) * 0.5 + 28px); }
     .hero-foot p { font-size: 1.1875rem; }
     .attitude { text-align: left; }
   }
@@ -235,8 +244,8 @@
   }
   .names h2, .names p { display: inline; font-size: inherit; }
   .names h2 { color: var(--ink); font-weight: 700; }
-  .names a { text-decoration: none; transition: color 200ms; }
-  .names a:hover, .names a:focus-visible { color: var(--ink); }
+  .names a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.18em; text-decoration-color: #3A4A6B; transition: text-decoration-color 200ms; }
+  .names a:hover, .names a:focus-visible { text-decoration-color: var(--accent); }
   .names .frame {
     display: inline-block; vertical-align: -0.06em;
     width: 1.3em; height: 0.8em; margin: 0 0.14em 0 0.24em;
@@ -252,8 +261,12 @@
   .band { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: clamp(64px, 8vw, 112px); }
   .band .pic { aspect-ratio: 4 / 3; overflow: clip; background: var(--surface); }
   .band img { width: 100%; height: 100%; object-fit: cover; transform: scale(var(--zoom, 1)); will-change: transform; }
-  .band figcaption { font-size: var(--step-small); color: var(--muted); padding-top: 10px; }
-  .band figcaption b { color: var(--ink); font-weight: 600; }
+  .band .tile { text-decoration: none; display: block; }
+  .band .cap { display: block; padding-top: 12px; font-size: var(--step-body); color: var(--muted); }
+  .band .cap b { display: block; color: var(--ink); font-weight: 600; }
+  .band .tile:hover .cap b { color: var(--accent); }
+  .band .tile .pic img { transition: filter 300ms; }
+  .band .tile:hover .pic img { filter: brightness(1.08); }
   @media (max-width: 760px) { .band { grid-template-columns: 1fr; gap: 28px; } }
 
   /* ---------- project log ---------- */
@@ -270,7 +283,7 @@
   .log-table td:nth-child(2) { width: 44%; padding-right: 2rem; }
   .log-table td:last-child { text-align: right; font-size: var(--step-small); color: var(--muted); }
   .log-table .kind { display: block; font-size: var(--step-small); font-weight: 600; color: var(--amber); margin-bottom: 6px; }
-  .log-table a.more { display: inline-block; margin-top: 12px; font-size: var(--step-body); font-weight: 600; color: var(--accent); text-decoration: none; }
+  .log-table a.more { display: inline-block; padding: 12px 0; margin-top: 2px; font-size: var(--step-body); font-weight: 600; color: var(--accent); text-decoration: none; }
   .log-table a.more:hover { text-decoration: underline; text-underline-offset: 4px; }
   .log-table a.more span { display: inline-block; transition: transform 200ms var(--ease-out); }
   .log-table a.more:hover span { transform: translateX(4px); }
@@ -296,16 +309,14 @@
     font-size: var(--step-lead);
     line-height: 1.34;
     color: var(--ink-soft);
-    text-align: justify; hyphens: auto;
+    text-wrap: pretty;
   }
   .story-text mark {
     color: var(--accent-ink);
     padding: 0 0.12em;
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
   }
-  .story-text mark.c { background: var(--accent); }
-  .story-text mark.a { background: var(--amber); }
-  .story-text mark.s { background: var(--surface-2); color: var(--ink); }
+  .story-text mark { background: var(--surface-2); color: var(--ink); font-weight: 500; }
   .story-text a.finale {
     background: var(--accent); color: var(--accent-ink); text-decoration: none; padding: 0 0.12em; font-weight: 600;
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
@@ -313,7 +324,7 @@
   }
   .story-text a.finale:hover { background: var(--accent-hover); }
   @media (max-width: 760px) {
-    .story-text { columns: 1; text-align: left; hyphens: manual; font-size: 1.25rem; }
+    .story-text { columns: 1; font-size: 1.25rem; }
     .story-text a.finale { display: block; margin-top: 24px; padding: 14px 12px; }
   }
 
@@ -421,17 +432,20 @@
         <li><a href="#contact">Contact</a></li>
       </ul>
     </nav>
-    <a class="btn" href="PRIM_Rattanak_CV.pdf" download="PRIM_Rattanak_CV.pdf"><span class="only-wide">Download&nbsp;</span>CV
+    <a class="btn" href="PRIM_Rattanak_CV.pdf" download="PRIM_Rattanak_CV.pdf"><span><span class="only-wide">Download </span>CV</span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><path d="M12 3v13M6 11l6 6 6-6M4 21h16"/></svg>
     </a>
   </div>
 
   <div class="hero-foot">
     <p data-load style="--d:380ms">Robotics &amp; automation engineer in Phnom Penh. I design, build and fly UAVs.</p>
-    <button class="attitude" id="attitude" type="button" data-load style="--d:480ms"
-      aria-label="Artificial horizon: move the pointer over the page, or use the arrow keys while this is focused, to roll and pitch it. Press Enter to level it.">
-      Roll <b id="roll">+0.0°</b> · Pitch <b id="pitch">+0.0°</b>
-    </button>
+    <div class="attitude-wrap" data-load style="--d:480ms">
+      <span class="attitude-hint" id="attitude-hint">Arrow keys to fly · Enter to level</span>
+      <button class="attitude" id="attitude" type="button" aria-describedby="attitude-help">
+        Roll <b id="roll">+0.0°</b> · Pitch <b id="pitch">+0.0°</b>
+      </button>
+      <span class="visually-hidden" id="attitude-help">Artificial horizon. Move the pointer over the hero, or use the arrow keys on this button, to roll and pitch it. Press Enter to level it.</span>
+    </div>
   </div>
 </header>
 
@@ -486,8 +500,8 @@
     <div class="names" data-rise>
       <h2 id="work-h">Selected work:</h2>
       <p>
-        <a href="#p-arm">7-DOF robotic manipulator<span class="frame"><img src="assets/img/projects/7dof-arm.webp" width="570" height="760" alt="" loading="lazy" decoding="async"></span></a>,
-        <a href="#p-go2">quadruped robot on the Unitree Go2<span class="frame"><img src="assets/img/projects/quadruped-go2.webp" width="760" height="325" alt="" loading="lazy" decoding="async"></span></a>,
+        <a href="manipulator/">7-DOF robotic manipulator<span class="frame"><img src="assets/img/projects/7dof-arm.webp" width="570" height="760" alt="" loading="lazy" decoding="async"></span></a>,
+        <a href="quadruped/">quadruped robot on the Unitree Go2<span class="frame"><img src="assets/img/projects/quadruped-go2.webp" width="760" height="325" alt="" loading="lazy" decoding="async"></span></a>,
         <a href="#p-vtol">VTOL UAV platform<span class="frame"><img src="assets/img/projects/vtol-uav.webp" width="760" height="433" alt="" loading="lazy" decoding="async"></span></a>,
         <a href="#p-fc">flight controller &amp; smart driver<span class="frame"><img src="assets/img/projects/flight-controller.webp" width="750" height="601" alt="" loading="lazy" decoding="async"></span></a>,
         <a href="#p-mp">motion planning &amp; simulation<span class="frame"><img src="assets/img/projects/motion-planning.webp" width="760" height="433" alt="" loading="lazy" decoding="async"></span></a>,
@@ -495,21 +509,21 @@
         and <a href="#p-out">robotics outreach<span class="frame"><img src="assets/img/projects/robotics-outreach.webp" width="760" height="570" alt="" loading="lazy" decoding="async"></span></a>.
       </p>
     </div>
-    <p class="names-note" data-rise style="--r:1">Seven projects from the Dynamics &amp; Control Laboratory at ITC, an internship at Camflytec, and the classroom.</p>
+    <p class="names-note" data-rise style="--r:1">Seven projects from the Dynamics &amp; Control Laboratory at ITC, an internship at Camflytec, and the classroom. The first two have their own pages.</p>
 
     <div class="band">
-      <figure data-rise>
+      <a class="tile" href="manipulator/" data-rise>
+        <div class="pic"><img src="assets/img/projects/7dof-arm.webp" width="570" height="760" alt="The 7-DOF robotic manipulator in the Dynamics & Control Laboratory" loading="lazy" decoding="async" style="object-position:50% 35%"></div>
+        <span class="cap"><b>7-DOF robotic manipulator</b> Thesis case study <span aria-hidden="true">→</span></span>
+      </a>
+      <a class="tile" href="quadruped/" data-rise style="--r:1">
         <div class="pic"><img src="assets/img/projects/quadruped-go2.webp" width="760" height="325" alt="Unitree Go2 quadruped with a mounted arm in MuJoCo simulation" loading="lazy" decoding="async"></div>
-        <figcaption><b>Unitree Go2</b> with a mounted arm, in MuJoCo</figcaption>
-      </figure>
-      <figure data-rise style="--r:1">
-        <div class="pic"><img src="assets/img/projects/vtol-uav.webp" width="760" height="433" alt="CAD model of a fixed-wing VTOL UAV" loading="lazy" decoding="async"></div>
-        <figcaption><b>VTOL UAV</b>, the fixed-wing airframe in CAD</figcaption>
-      </figure>
-      <figure data-rise style="--r:2">
+        <span class="cap"><b>Quadruped robot, Unitree Go2</b> Control centre <span aria-hidden="true">→</span></span>
+      </a>
+      <a class="tile" href="#p-fc" data-rise style="--r:2">
         <div class="pic"><img src="assets/img/projects/flight-controller.webp" width="750" height="601" alt="KiCad 3D render of the ATmega32U4 flight controller PCB" loading="lazy" decoding="async"></div>
-        <figcaption><b>Flight controller</b>, the ATmega32U4 board in KiCad</figcaption>
-      </figure>
+        <span class="cap"><b>Flight controller</b> The ATmega32U4 board, in the log <span aria-hidden="true">↓</span></span>
+      </a>
     </div>
   </section>
 
@@ -562,7 +576,7 @@
   <section id="experience" class="wrap story" aria-labelledby="exp-h">
     <h2 id="exp-h" class="display" data-rise>Beyond the lab</h2>
     <p class="story-text" data-rise style="--r:1">
-      From 2022 to 2025 I worked in the <mark class="c">Dynamics &amp; Control Laboratory</mark> at ITC, where I also applied machine learning to autonomous drones (movement and object detection, auto-landing on Jetson Nano and Raspberry Pi) and used OpenCV for face detection and tracking. I spent a study semester at <mark class="a">ECAM LaSalle in Lyon</mark>, studied jet-engine simulation as an intern at <mark class="s">Lanmei Airlines</mark>, and joined a hands-on workshop at Kasetsart University in Thailand. I've visited Delta Electronics, MinebeaMitsumi, Phnom Penh Airport and Coca-Cola, and competed in the Techno Innovation Challenge and the <mark class="c">10th Engineering Innovation Challenge</mark> in Singapore. Earlier builds include a 4-axis robotic arm, small 3- and 4-wheel cars, a line-tracking car, an autonomous grass cutter and water-pump automation. I teach robotics as a volunteer at <mark class="a">Passerelles Numériques</mark>, mentor at Wander in Tech, and led my high-school STEM team for three years. <a class="finale" href="#contact">Let's build something that flies.</a>
+      From 2022 to 2025 I worked in the <mark class="c">Dynamics &amp; Control Laboratory</mark> at ITC, where I also applied machine learning to autonomous drones (movement and object detection, auto-landing on Jetson Nano and Raspberry Pi) and used OpenCV for face detection and tracking. I spent a study semester at <mark class="a">ECAM LaSalle in Lyon</mark>, studied jet-engine simulation as an intern at <mark class="s">Lanmei Airlines</mark>, and joined a hands-on workshop at Kasetsart University in Thailand. I've visited Delta Electronics, MinebeaMitsumi, Phnom Penh Airport and Coca-Cola, and competed in the Techno Innovation Challenge and the <mark class="c">10th Engineering Innovation Challenge</mark> in Singapore. Earlier builds include a 4-axis robotic arm, small 3- and 4-wheel cars, a line-tracking car, an autonomous grass cutter and water-pump automation. I teach robotics as a volunteer at <mark class="a">Passerelles Numériques</mark>, mentor at Wander in Tech, and led my high-school STEM team for three years. <a class="finale" href="#contact">Get in touch <span aria-hidden="true">→</span></a>
     </p>
   </section>
 
@@ -571,13 +585,12 @@
     <ul class="rows">
       <li data-rise><a href="mailto:primratanak@gmail.com"><span>primratanak@gmail.com</span></a></li>
       <li data-rise><a href="tel:+85514880838"><span>+855 14 880 838</span></a></li>
-      <li data-rise><a href="https://www.google.com/maps/search/?api=1&amp;query=Toul+Kork,+Phnom+Penh" target="_blank" rel="noopener"><span>Toul Kork, Phnom Penh</span></a></li>
+      <li data-rise><a href="https://github.com/rattanakprim" target="_blank" rel="noopener"><span>GitHub</span></a></li>
       <li data-rise><a href="https://www.linkedin.com/in/prim-rattanak-12b5452a3/" target="_blank" rel="noopener"><span>LinkedIn</span></a></li>
       <li class="greet" data-rise>
         <a href="mailto:primratanak@gmail.com?subject=Hello%20Rattanak&amp;body=Sousdey%20Rattanak%2C%0A%0A">
-          <span>Sousdey</span>
+          <span>Write to me</span>
           <span class="round" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-          <span class="visually-hidden">, write me an email</span>
         </a>
       </li>
     </ul>
@@ -638,6 +651,11 @@
   var rollEl = document.getElementById('roll');
   var pitchEl = document.getElementById('pitch');
   var btn = document.getElementById('attitude');
+  var foot = hero.querySelector('.hero-foot');
+  function firstTextTop() {
+    var a = foot.firstElementChild, b = foot.lastElementChild;
+    return Math.min(a.offsetTop, b.offsetTop);
+  }
   var MAX_ROLL = 12, MAX_PITCH = 10;              /* degrees */
   var target = { roll: 0, pitch: 0 }, cur = { roll: 0, pitch: 0 };
   var pointerActive = false, lastInput = 0, t0 = performance.now(), raf = 0, visible = true;
@@ -649,8 +667,11 @@
     var seam = parseFloat(getComputedStyle(hero).getPropertyValue('--seam')) / 100 * h;
     var off = cur.pitch * (h / 60);                 /* pitch moves the horizon */
     var dy = Math.tan(cur.roll * Math.PI / 180) * w / 2;
-    ground.style.setProperty('--yl', (seam + off + dy) + 'px');
-    ground.style.setProperty('--yr', (seam + off - dy) + 'px');
+    /* never let the sky reach the tagline or the readout, which are set in the ground's ink */
+    var limit = foot.offsetTop + firstTextTop() - 16;
+    var yl = Math.min(seam + off + dy, limit), yr = Math.min(seam + off - dy, limit);
+    ground.style.setProperty('--yl', yl + 'px');
+    ground.style.setProperty('--yr', yr + 'px');
     rollEl.textContent = fmt(cur.roll);
     pitchEl.textContent = fmt(cur.pitch);
   }
@@ -687,7 +708,7 @@
     e.preventDefault();
     target.roll = Math.max(-MAX_ROLL, Math.min(MAX_ROLL, target.roll + step[0] * 2));
     target.pitch = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, target.pitch + step[1] * 2));
-    lastInput = performance.now() + 4000; kick();
+    lastInput = performance.now() + 12000; kick();
   });
   btn.addEventListener('click', function () {
     target.roll = 0; target.pitch = 0; lastInput = performance.now() + 2000; kick();
