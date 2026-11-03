@@ -97,6 +97,30 @@
   figure.wide img { width: 100%; height: auto; }
   figcaption { padding: 0.8rem 1.1rem; font-size: 0.85rem; color: var(--text-dim); border-top: 1px solid var(--line); background: var(--bg-raised); }
 
+  .arm-viewer { border: 1px solid var(--line-bright); border-radius: 16px; overflow: hidden; background: var(--bg-panel); }
+  .arm-viewer-grid { display: grid; grid-template-columns: 1.3fr 1fr; }
+  .arm-viewport { position: relative; aspect-ratio: 4 / 3; background:
+    radial-gradient(ellipse 70% 70% at 50% 40%, var(--glow), transparent 70%), var(--bg-panel); }
+  .arm-viewport canvas { display: block; width: 100%; height: 100%; }
+  .arm-load { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 0.9rem; text-align: center; padding: 1.5rem; }
+  .arm-load svg { width: 34px; height: 34px; color: var(--cyan); }
+  .arm-load-btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.3rem; border-radius: 99px;
+    font: 600 0.85rem var(--display); border: 1px solid var(--cyan); background: var(--cyan); color: #04121A; cursor: pointer; }
+  .arm-load-btn:hover { filter: brightness(1.08); }
+  .arm-load-btn:disabled { opacity: 0.6; cursor: wait; }
+  .arm-load-note { font-size: 0.78rem; color: var(--text-dim); max-width: 24rem; }
+  .arm-status { font-size: 0.78rem; color: var(--text-dim); min-height: 1.1em; }
+  .arm-panel { padding: 1.2rem 1.4rem; border-left: 1px solid var(--line); display: flex; flex-direction: column;
+    gap: 0.85rem; max-height: min(420px, 60vw); overflow: auto; }
+  .arm-joint-row { display: flex; flex-direction: column; gap: 0.3rem; }
+  .arm-joint-row label { font: 600 0.68rem var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+  .arm-joint-row input[type="range"] { width: 100%; accent-color: var(--cyan); }
+  .arm-reset-btn { margin-top: 0.3rem; align-self: flex-start; padding: 0.5rem 1rem; border-radius: 99px;
+    border: 1px solid var(--line-bright); background: transparent; color: var(--text-bright); font: 600 0.78rem var(--display); cursor: pointer; }
+  .arm-reset-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .arm-panel:empty { display: none; }
+
   .cta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.2rem; padding: 1.6rem 1.8rem; border: 1px solid var(--line-bright); border-radius: 16px; background: radial-gradient(ellipse 60% 120% at 100% 0%, var(--glow), transparent 70%), var(--bg-raised); }
   .cta h3 { font: 600 1.15rem var(--display); color: var(--text-bright); }
   .cta p { font-size: 0.92rem; }
@@ -119,6 +143,8 @@
     .fact:nth-child(3) { border-left: 0; }
     .fact:nth-child(n+3) { border-top: 1px solid var(--line); }
     .steps { grid-template-columns: 1fr; }
+    .arm-viewer-grid { grid-template-columns: 1fr; }
+    .arm-panel { border-left: 0; border-top: 1px solid var(--line); max-height: none; }
   }
 </style>
 </head>
@@ -213,6 +239,28 @@
 
   <section>
     <div class="wrap">
+      <h2>Inspect it yourself</h2>
+      <div class="rule"></div>
+      <p class="prose" style="margin-bottom: 1.4rem;">This is the real seven-joint kinematic chain from the thesis, loaded from the same URDF used in ROS and MoveIt. Drag the sliders to move each joint through its actual limits.</p>
+      <div class="arm-viewer" id="arm-viewer-root">
+        <div class="arm-viewer-grid">
+          <div class="arm-viewport" data-arm-viewport>
+            <div class="arm-load" data-arm-load-wrap>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <button type="button" class="arm-load-btn" data-arm-load>Load interactive 3D model</button>
+              <p class="arm-load-note">Loads a ~3.6MB 3D viewer (three.js + the decimated arm mesh). Nothing downloads until you click.</p>
+            </div>
+          </div>
+          <div class="arm-panel" data-arm-panel></div>
+        </div>
+        <p class="arm-status" data-arm-status role="status" aria-live="polite"></p>
+      </div>
+      <noscript><p class="prose">Enable JavaScript to use the interactive 3D model.</p></noscript>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
       <div class="cta">
         <div>
           <h3>Want the details?</h3>
@@ -239,5 +287,40 @@
 <footer>
   <div class="wrap">PRIM_RATTANAK · <a href="../">Back to portfolio</a></div>
 </footer>
+
+<script>
+(function () {
+  'use strict';
+  var root = document.getElementById('arm-viewer-root');
+  if (!root) return;
+  var loadWrap = root.querySelector('[data-arm-load-wrap]');
+  var btn = root.querySelector('[data-arm-load]');
+  var statusEl = root.querySelector('[data-arm-status]');
+
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+    statusEl.textContent = 'Loading the 3D viewer…';
+
+    var s = document.createElement('script');
+    s.src = 'assets/arm-viewer/arm-viewer.bundle.js';
+    s.onload = function () {
+      loadWrap.remove();
+      statusEl.textContent = 'Loading the arm model…';
+      window.ArmViewer.init(root, {
+        urdfUrl: 'assets/arm-viewer/arm.urdf',
+        onReady: function () { statusEl.textContent = ''; },
+        onError: function () { statusEl.textContent = 'Could not load the 3D model.'; }
+      });
+    };
+    s.onerror = function () {
+      statusEl.textContent = 'Could not load the 3D viewer.';
+      btn.disabled = false;
+      btn.textContent = 'Try again';
+    };
+    document.body.appendChild(s);
+  });
+})();
+</script>
 </body>
 </html>
