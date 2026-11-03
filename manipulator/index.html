@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7-DOF Robotic Manipulator — Prim Rattanak</title>
+<meta name="description" content="Thesis project by Prim Rattanak: a seven-degree-of-freedom robotic arm designed and built end to end at the Dynamics & Control Laboratory, Institute of Technology of Cambodia.">
+<link rel="canonical" href="https://rattanakprim.github.io/manipulator/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="7-DOF Robotic Manipulator — Prim Rattanak">
+<meta property="og:description" content="Mechanical design, kinematics, motion planning and control of a seven-degree-of-freedom robotic arm.">
+<meta property="og:url" content="https://rattanakprim.github.io/manipulator/">
+<meta property="og:image" content="https://rattanakprim.github.io/og-image.png">
+<meta name="theme-color" content="#0A0E1A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%2300D4FF' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M20 24L44 40M20 40L44 24'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%2300D4FF' stroke='none'/%3E%3Cellipse cx='20' cy='24' rx='9' ry='3'/%3E%3Cellipse cx='44' cy='24' rx='9' ry='3'/%3E%3Cellipse cx='20' cy='40' rx='9' ry='3'/%3E%3Cellipse cx='44' cy='40' rx='9' ry='3'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preload" href="../assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/bropella.woff2" as="font" type="font/woff2" crossorigin>
+<script>
+  try { if (localStorage.getItem('pr-theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
+<style>
+  @font-face { font-family: 'Space Grotesk'; font-weight: 300 700; font-display: swap; src: url(../assets/fonts/space-grotesk.woff2) format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 100 900; font-display: swap; src: url(../assets/fonts/inter.woff2) format('woff2'); }
+  @font-face { font-family: 'Bropella'; font-weight: 400; font-display: swap; src: url(../assets/fonts/bropella.woff2) format('woff2'); }
+
+  :root {
+    --bg: #0A0E1A; --bg-raised: #0E1426; --bg-panel: #101830;
+    --line: #1C2740; --line-bright: #2A3A5E;
+    --cyan: #00D4FF; --cyan-dim: rgba(0, 212, 255, 0.12);
+    --amber: #FFB800;
+    --text: #9FADC6; --text-bright: #EDF2FB; --text-dim: #7686A3;
+    --grid-line: rgba(0, 212, 255, 0.06); --glow: rgba(0, 212, 255, 0.10);
+    --display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+    --body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html[data-theme="light"] {
+    --bg: #F2F5FA; --bg-raised: #FFFFFF; --bg-panel: #E7EDF6;
+    --line: #D8E0EC; --line-bright: #B9C6DB;
+    --cyan: #006E8C; --cyan-dim: rgba(0, 110, 140, 0.1);
+    --amber: #A96F00;
+    --text: #42506A; --text-bright: #0F1728; --text-dim: #5A6478;
+    --grid-line: rgba(20, 60, 120, 0.07); --glow: rgba(0, 140, 200, 0.10);
+    color-scheme: light;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font: 400 1rem/1.7 var(--body); -webkit-font-smoothing: antialiased; }
+  a { color: var(--cyan); }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 1.25rem; }
+
+  header.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { font: 700 0.95rem var(--display); letter-spacing: 0.04em; color: var(--text-bright); text-decoration: none; }
+  .brand span { color: var(--cyan); }
+  .back { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--text); text-decoration: none; }
+  .back:hover { color: var(--cyan); }
+  .back svg { width: 15px; height: 15px; }
+
+  .hero { position: relative; padding: clamp(2.5rem, 6vw, 4.5rem) 0; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; inset: 0; z-index: -1;
+    background: radial-gradient(ellipse 55% 60% at 75% 40%, var(--glow), transparent 70%),
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 56px 56px,
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 56px 56px; }
+  .hero-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; }
+  .eyebrow { font: 600 0.72rem var(--display); letter-spacing: 0.22em; text-transform: uppercase; color: var(--cyan); display: flex; align-items: center; gap: 0.6rem; }
+  .eyebrow::before { content: ""; width: 22px; height: 1px; background: currentColor; }
+  h1 { font: 400 clamp(2.1rem, 5.5vw, 3.4rem)/1.08 'Bropella', var(--display); color: var(--text-bright); margin: 0.9rem 0 1.1rem; text-wrap: balance; }
+  .lead { font-size: 1.08rem; max-width: 34rem; }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 1.4rem; }
+  .tags span { font: 600 0.68rem var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--cyan); border: 1px solid var(--line-bright); background: var(--cyan-dim); padding: 0.25rem 0.7rem; border-radius: 99px; }
+  .hero-photo { border-radius: 16px; overflow: hidden; border: 1px solid var(--line-bright); aspect-ratio: 4 / 5; background: var(--bg-panel); }
+  .hero-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 14px; background: var(--bg-raised); margin-top: clamp(2rem, 5vw, 3rem); }
+  .fact { padding: 1rem 1.2rem; border-left: 1px solid var(--line); }
+  .fact:first-child { border-left: 0; }
+  .fact small { display: block; font: 600 0.64rem var(--display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); }
+  .fact b { font: 600 0.95rem var(--display); color: var(--text-bright); }
+
+  section { padding: clamp(2.5rem, 6vw, 4rem) 0; }
+  h2 { font: 400 clamp(1.6rem, 3.6vw, 2.2rem)/1.15 'Bropella', var(--display); color: var(--text-bright); margin-bottom: 0.5rem; }
+  .rule { width: 42px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--cyan), var(--amber)); margin-bottom: 1.8rem; }
+  p + p { margin-top: 1rem; }
+  .prose { max-width: 42rem; }
+  .prose strong { color: var(--text-bright); font-weight: 600; }
+
+  .steps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; counter-reset: step; }
+  .step { counter-increment: step; padding: 1.4rem 1.4rem 1.5rem; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-raised); }
+  .step::before { content: "0" counter(step); font: 600 0.75rem var(--display); letter-spacing: 0.14em; color: var(--amber); }
+  .step h3 { font: 600 1.05rem var(--display); color: var(--text-bright); margin: 0.35rem 0 0.5rem; }
+  .step p { font-size: 0.93rem; }
+  .step .tool { margin-top: 0.8rem; font-size: 0.78rem; color: var(--text-dim); }
+  .step .tool b { color: var(--cyan); font-weight: 600; }
+
+  figure.wide { border: 1px solid var(--line-bright); border-radius: 16px; overflow: hidden; background: var(--bg-panel); }
+  figure.wide img { width: 100%; height: auto; }
+  figcaption { padding: 0.8rem 1.1rem; font-size: 0.85rem; color: var(--text-dim); border-top: 1px solid var(--line); background: var(--bg-raised); }
+
+  .cta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.2rem; padding: 1.6rem 1.8rem; border: 1px solid var(--line-bright); border-radius: 16px; background: radial-gradient(ellipse 60% 120% at 100% 0%, var(--glow), transparent 70%), var(--bg-raised); }
+  .cta h3 { font: 600 1.15rem var(--display); color: var(--text-bright); }
+  .cta p { font-size: 0.92rem; }
+  .btns { display: flex; flex-wrap: wrap; gap: 0.7rem; }
+  .btn { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.7rem 1.3rem; border-radius: 99px; font: 600 0.85rem var(--display); text-decoration: none; border: 1px solid var(--line-bright); color: var(--text-bright); }
+  .btn.primary { background: var(--cyan); border-color: var(--cyan); color: #04121A; }
+  .btn:hover { border-color: var(--cyan); }
+  .btn svg { width: 15px; height: 15px; }
+
+  .next { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.2rem 0; border-top: 1px solid var(--line); text-decoration: none; color: var(--text); }
+  .next b { display: block; font: 600 1.05rem var(--display); color: var(--text-bright); }
+  .next:hover b { color: var(--cyan); }
+  .next svg { width: 20px; height: 20px; color: var(--cyan); flex: none; }
+  footer { padding: 2rem 0 3rem; font-size: 0.8rem; color: var(--text-dim); }
+
+  @media (max-width: 820px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero-photo { max-width: 420px; }
+    .facts { grid-template-columns: repeat(2, 1fr); }
+    .fact:nth-child(3) { border-left: 0; }
+    .fact:nth-child(n+3) { border-top: 1px solid var(--line); }
+    .steps { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="../">PRIM<span>_</span>RATTANAK</a>
+    <a class="back" href="../#projects">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+      All projects
+    </a>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow">Thesis project · DCLab, ITC</p>
+          <h1>7-DOF Robotic Manipulator</h1>
+          <p class="lead">A seven-degree-of-freedom robotic arm that I designed and built end to end — from the mechanical design in CAD, through the kinematics and motion planning, to the control of the real hardware.</p>
+          <div class="tags"><span>SolidWorks</span><span>MATLAB</span><span>ROS</span><span>MoveIt</span><span>Python</span><span>Control</span></div>
+        </div>
+        <div class="hero-photo">
+          <img src="../assets/img/projects/7dof-arm.webp" width="570" height="760" alt="The 7-DOF robotic manipulator mounted in the Dynamics & Control Laboratory" fetchpriority="high">
+        </div>
+      </div>
+
+      <!-- Add real numbers here when you have them, e.g. reach (mm), payload (kg), repeatability (mm). -->
+      <div class="facts">
+        <div class="fact"><small>Degrees of freedom</small><b>7</b></div>
+        <div class="fact"><small>Role</small><b>Design, build &amp; control</b></div>
+        <div class="fact"><small>Lab</small><b>Dynamics &amp; Control Lab</b></div>
+        <div class="fact"><small>Institution</small><b>ITC, Phnom Penh</b></div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <h2>Why seven joints</h2>
+      <div class="rule"></div>
+      <div class="prose">
+        <p>A six-joint arm has exactly enough freedom to place its tool at any position and orientation in its workspace. A <strong>seventh joint adds redundancy</strong>: the arm can reach the same pose in many different ways, which lets it move its elbow around obstacles, stay away from joint limits and singular configurations, and work more like a human arm.</p>
+        <p>That extra freedom is also what makes the project hard. The inverse kinematics no longer has a single answer, so the planner and controller have to choose between infinitely many valid arm configurations.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>How I built it</h2>
+      <div class="rule"></div>
+      <!-- Each step: add one concrete detail or result (a number, a design choice, a problem you solved). -->
+      <div class="steps">
+        <div class="step">
+          <h3>Mechanical design</h3>
+          <p>Designed the links, joints and mounts of the arm in CAD, then manufactured and assembled the parts into the physical manipulator.</p>
+          <p class="tool">Tools: <b>SolidWorks</b></p>
+        </div>
+        <div class="step">
+          <h3>Kinematics</h3>
+          <p>Modelled the forward and inverse kinematics of the seven-joint chain, handling the redundancy that a seventh joint introduces.</p>
+          <p class="tool">Tools: <b>MATLAB</b></p>
+        </div>
+        <div class="step">
+          <h3>Motion planning &amp; simulation</h3>
+          <p>Planned and validated trajectories in simulation before a single motor moved on the real hardware.</p>
+          <p class="tool">Tools: <b>ROS</b> · <b>MoveIt</b> · <b>RViz</b> · <b>Python</b></p>
+        </div>
+        <div class="step">
+          <h3>Control</h3>
+          <p>Implemented the control of the joints on the real arm, closing the loop between the planned trajectory and the hardware.</p>
+          <p class="tool">Tools: <b>MATLAB</b> · <b>Python</b></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Simulation first</h2>
+      <div class="rule"></div>
+      <figure class="wide">
+        <img src="../assets/img/projects/motion-planning.webp" width="760" height="428" alt="Motion planning simulation of the manipulator in RViz" loading="lazy" decoding="async">
+        <figcaption>Planning a trajectory for the manipulator in RViz with MoveIt before running it on the real arm.</figcaption>
+      </figure>
+      <!-- Add a demo video here, e.g. a YouTube embed of the real arm following a planned trajectory. -->
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="cta">
+        <div>
+          <h3>Want the details?</h3>
+          <p>Ask me for the full thesis, or get in touch about robotics and UAV roles.</p>
+        </div>
+        <div class="btns">
+          <a class="btn primary" href="../#contact">Contact me
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn" href="../PRIM_Rattanak_CV.pdf" download>Download CV</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <a class="next" href="../quadruped/">
+      <span><small>Next project</small><b>Quadruped Robot — Unitree Go2</b></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">PRIM_RATTANAK · <a href="../">Back to portfolio</a></div>
+</footer>
+</body>
+</html>
