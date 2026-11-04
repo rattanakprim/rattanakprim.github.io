@@ -178,6 +178,28 @@
   footer { margin:22px 2px 6px; font-size:11px; color:var(--muted2); }
   footer code { color:var(--muted); }
 
+  /* ---------- intro overlay: explains what this is before anyone touches it ---------- */
+  #intro { position:fixed; inset:0; z-index:100; display:flex; align-items:center;
+           justify-content:center; padding:20px; background:rgba(5,7,12,.82);
+           backdrop-filter:blur(6px); }
+  #intro.hidden { display:none; }
+  #intro .box { max-width:460px; width:100%; background:var(--panel);
+                border:1px solid var(--line2); border-radius:16px; padding:26px 26px 22px;
+                box-shadow:0 20px 60px #0008; }
+  #intro h1 { font-size:18px; margin:0 0 10px; display:flex; align-items:center; gap:9px; }
+  #intro p { font-size:13.5px; color:var(--muted); line-height:1.6; margin:0 0 12px; }
+  #intro ul { margin:0 0 16px; padding-left:18px; font-size:13px; color:var(--muted); line-height:1.7; }
+  #intro .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+  #intro a.btn, #intro button.btn { flex:1; min-width:140px; text-align:center;
+       padding:11px 14px; border-radius:var(--r-sm); font-weight:700; font-size:13px;
+       text-decoration:none; cursor:pointer; border:1px solid var(--line2); color:var(--txt);
+       background:var(--panel2); }
+  #intro .btn.accent { background:linear-gradient(135deg,var(--accent2),var(--accent));
+       border-color:var(--accent); color:#fff; }
+  #infobtn { position:fixed; bottom:16px; right:16px; z-index:40; width:34px; height:34px;
+             border-radius:50%; border:1px solid var(--line2); background:var(--panel2);
+             color:var(--txt); font-weight:700; cursor:pointer; }
+
   /* ---------- responsive: stack on phones, pin the sim on top ---------- */
   @media (max-width:900px) {
     body { overflow:auto; }
@@ -191,6 +213,29 @@
 </style>
 </head>
 <body>
+
+<div id="intro">
+  <div class="box">
+    <h1>🤖 You've found my Go2 control console</h1>
+    <p>This is the real web UI I built to drive my Unitree Go2 quadruped (with a mounted
+      7-DOF Piper arm) — not a mockup. It talks to the robot's ROS2 stack live over
+      rosbridge, the same way I control it in the lab.</p>
+    <ul>
+      <li>Manual drive, gait selection &amp; body pose</li>
+      <li>SLAM mapping + tap-to-navigate autonomy</li>
+      <li>Full arm teleop with pick-and-place presets</li>
+    </ul>
+    <p><b>It needs my robot (or its simulation) running and reachable</b> to actually move
+      anything — so right now it'll just sit at "connecting…". You're welcome to poke around
+      the interface itself, or head back for the project writeup and a way to reach me.</p>
+    <div class="row">
+      <a class="btn" href="../#projects">← Back to portfolio</a>
+      <button class="btn accent" id="introDismiss">Explore the live UI</button>
+    </div>
+  </div>
+</div>
+<button id="infobtn" title="What is this page?" aria-label="What is this page?">?</button>
+
 <div class="shell">
 
   <!-- ============ LEFT: persistent simulation stage ============ -->
@@ -973,6 +1018,19 @@ document.getElementById("resethome").addEventListener("click", () => {
 })();
 
 connect();
+
+// ---- intro overlay: show once per visitor, reachable again via the ? button ----
+(function () {
+  const intro = document.getElementById("intro");
+  const infobtn = document.getElementById("infobtn");
+  const seen = localStorage.getItem("go2_intro_seen");
+  if (seen) intro.classList.add("hidden");
+  document.getElementById("introDismiss").addEventListener("click", () => {
+    intro.classList.add("hidden");
+    localStorage.setItem("go2_intro_seen", "1");
+  });
+  infobtn.addEventListener("click", () => intro.classList.remove("hidden"));
+})();
 </script>
 </body>
 </html>
